@@ -24,9 +24,12 @@ benchmark, 763 MB in the one-time data parse) and are stored in
 - **ROC-AUC flatters.** On forest cover (0.96% anomalies) the One-Class SVM scores ROC-AUC 0.935
   but AP 0.091. Alerting on the top 1% of scores, the best detectors are right about **1 alert
   in 10** and catch about 10% of the anomalies.
-- **Five datasets cannot separate eight detectors.** The Iman-Davenport test rejects "all
-  detectors are equal" (p = 0.041), but the Nemenyi critical difference is 4.70 ranks, larger than
-  the gap between the best and the worst detector (2.20 vs 6.40).
+- **Five datasets cannot separate eight detectors, and they are not five independent
+  datasets.** `kdd-SA`, `kdd-SF` and `kdd-http` are nested subsets of one KDD Cup 99 file, so
+  the tests below, which assume independence, overstate the evidence. Even at face value, the
+  Iman-Davenport test rejects "all detectors are equal" (p = 0.041), but the Nemenyi critical
+  difference is 4.70 ranks, larger than the gap between the best and the worst detector
+  (2.20 vs 6.40).
 - **KDD Cup 99 duplicates decide the ranking.** 69-98% of attack rows are exact copies of another
   row (10-34% of normal rows), so attacks form dense clusters and kNN distance scores *below
   random* (ROC-AUC 0.050-0.154 on three KDD subsets). After de-duplication the autoencoder goes
@@ -62,7 +65,7 @@ how to turn scores into an alert budget.
 **Protocol (fully unsupervised).** Every detector is fitted on the unlabeled data, anomalies
 included, and scores the same rows, as in Campos et al. (2016) and ADBench. Labels are used only
 for evaluation. Hyperparameters are the usual defaults from each method's paper or library (for
-the autoencoder, a small standard architecture), fixed before looking at results; tuning them on
+the autoencoder, a small standard architecture) and are not tuned; tuning them on
 labels would be cheating in a setting that has none.
 Stochastic detectors run with five seeds (0-4); the data subsample is fixed, so seed variation
 measures the detector's own randomness.
@@ -82,7 +85,7 @@ unchanged) to fit an 8 GB laptop and a few minutes of CPU.
 The KDD subsets are scikit-learn's `fetch_kddcup99(subset=..., percent10=True)` definitions,
 the forest-cover set follows Liu et al. (2008) with the 10 quantitative columns. **`kdd-smtp` has
 only three anomalies**, so one anomaly moving a few places changes its AP by 0.3; it is reported
-but excluded from the average ranks (rule fixed in advance: at least 10 anomalies).
+but excluded from the average ranks (rule: at least 10 anomalies).
 
 **Preprocessing** (one function, never sees labels; a test checks that shuffling the labels leaves
 the features unchanged):
@@ -137,7 +140,8 @@ on one machine (Apple M3, 2 threads).
 
 Average rank, mean AP and mean ROC-AUC over the five ranked datasets (rank 1 = best). Seed range:
 best and worst average rank when the whole benchmark is re-run with a single seed. Time: one fit +
-score of each dataset (median over seeds), summed over all six.
+score of each dataset (median over seeds), summed over all six. Three of the five ranked
+datasets are KDD Cup 99 subsets, so KDD-specific behaviour counts three times in the average rank.
 
 | Detector | Family | Avg AP rank | Seed range | Mean AP | Mean ROC-AUC | Time (s) |
 |---|---|---:|---:|---:|---:|---:|
@@ -219,7 +223,7 @@ the neighbour methods (11-15 s; the neighbour methods spend most of it on the 79
 
 ![Precision-recall curves on covtype with the 1% budget marked](reports/figures/pr_curves_covtype.png)
 
-`covtype` was chosen in advance for this section: its 0.96% anomaly rate is typical for alerting,
+`covtype` is used for this section because its 0.96% anomaly rate is typical for alerting,
 and it is free of KDD99's duplicates. Precision (P) and recall (R) when alerting on a fixed share
 of the highest scores, averaged over seeds:
 
@@ -280,7 +284,7 @@ about its duplication as about the detectors.
 
 ### The autoencoder's training length
 
-AP of the autoencoder (seed 0) by number of epochs; the benchmark uses 10, fixed in advance:
+AP of the autoencoder (seed 0) by number of epochs; the benchmark uses 10:
 
 | Dataset | 5 epochs | 10 | 25 | 50 |
 |---|---:|---:|---:|---:|
@@ -299,8 +303,8 @@ no validation signal for when to stop, so in practice this choice is a guess.
   (duplicated); once `kdd-http` is de-duplicated it becomes the best detector there.
 - **Neighbour methods on bursty data**: LOF and kNN distance are worse than random on three KDD
   subsets.
-- **Statistical separation**: with five usable datasets the benchmark cannot declare any
-  detector significantly better than another.
+- **Statistical separation**: with five usable datasets, three of them drawn from the same file,
+  the benchmark cannot declare any detector significantly better than another.
 
 ## Lessons
 
