@@ -8,10 +8,15 @@ export OPENBLAS_NUM_THREADS = $(THREADS)
 export MKL_NUM_THREADS = $(THREADS)
 export VECLIB_MAXIMUM_THREADS = $(THREADS)
 
-.PHONY: install data run test lint clean
+.PHONY: install install-locked data run test lint clean
 
 install:
 	$(PYTHON) -m pip install -e ".[dev]"
+
+# Exact package versions that produced the committed reports/ (see requirements.lock).
+install-locked:
+	$(PYTHON) -m pip install -r requirements.lock
+	$(PYTHON) -m pip install -e . --no-deps
 
 # Download the raw archives (KDD Cup 1999 10%, CoverType) into data/raw/ and cache the subsets.
 data:

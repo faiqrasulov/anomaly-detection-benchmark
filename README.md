@@ -21,9 +21,9 @@ benchmark, 763 MB in the one-time data parse) and are stored in
   mean AP 0.457, and 0.85 s of compute for all six datasets together. Yet it has the highest mean
   AP on none of them: the per-dataset winners are PCA reconstruction, Elliptic Envelope (twice),
   the One-Class SVM and HBOS. It wins by never failing badly.
-- **ROC-AUC flatters.** On forest cover (0.96% anomalies) the One-Class SVM scores ROC-AUC 0.935
-  but AP 0.091. Alerting on the top 1% of scores, the best detectors are right about **1 alert
-  in 10** and catch about 10% of the anomalies.
+- **ROC-AUC flatters.** On forest cover (0.96% anomalies) the One-Class SVM (a Nystroem + SGD
+  approximation here) scores ROC-AUC 0.935 but AP 0.091. Alerting on the top 1% of scores, the
+  best detectors are right about **1 alert in 10** and catch about 10% of the anomalies.
 - **Five datasets cannot separate eight detectors, and they are not five independent
   datasets.** `kdd-SA`, `kdd-SF` and `kdd-http` are nested subsets of one KDD Cup 99 file, so
   the tests below, which assume independence, overstate the evidence. Even at face value, the
@@ -338,6 +338,14 @@ make install          # pip install -e ".[dev]" (PyTorch CPU is enough)
 make run              # download (~13 MB) -> benchmark -> reports/metrics.json, results.md, figures
 make test             # 65 tests, ~5 s, no network
 ```
+
+`make install` takes the newest compatible packages. To reproduce the committed `reports/`, use
+`make install-locked` instead: it installs the versions pinned in
+[`requirements.lock`](requirements.lock) (Python 3.12). With them `make run` regenerates every
+detector's scores exactly except the One-Class SVM, whose SGD solver is sensitive to the
+linear-algebra build: its average precision moves by up to 0.01 in the main tables (0.02 in one
+de-duplication cell) and no rank changes. The committed run used Anaconda's numpy build, not the
+PyPI wheel; timings depend on the machine (checked on macOS arm64).
 
 `make run` accepts `THREADS=4` and `MEMCAP="..."`; the CLI has more options:
 
