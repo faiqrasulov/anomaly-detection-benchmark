@@ -14,6 +14,7 @@ from .data import Dataset, subsample
 from .metrics import evaluate
 from .preprocess import prepare
 from .registry import DETECTORS, make_detector
+from .scratch import PCAReconstruction
 
 
 @dataclass
@@ -36,6 +37,26 @@ def duplicate_stats(X: np.ndarray, y: np.ndarray) -> dict[str, float]:
         "dup_share_anomalies": float(dup[y == 1].mean()),
         "dup_share_normals": float(dup[y == 0].mean()),
         "distinct_anomaly_rows": int(np.unique(X[y == 1], axis=0).shape[0]),
+    }
+
+
+def shift_stats(X: np.ndarray, y: np.ndarray, names: list[str]) -> dict[str, object]:
+    """Where do anomalies differ from normal rows? (A diagnostic; uses labels after the fact.)
+
+    Reports the feature with the largest mean shift (in preprocessed, robust-scaled units) and
+    the share of the squared mean-shift vector that lies inside the principal subspace a
+    90%-variance PCA keeps. A share near 1 means reconstruction-based detectors (PCA, the
+    autoencoder) see little of the difference.
+    """
+    shift = X[y == 1].mean(axis=0, dtype=np.float64) - X[y == 0].mean(axis=0, dtype=np.float64)
+    j = int(np.argmax(np.abs(shift)))
+    pca = PCAReconstruction(variance=0.9).fit(X)
+    inside = pca.components_ @ (pca.components_.T @ shift)
+    return {
+        "largest_shift_feature": names[j],
+        "largest_shift": float(shift[j]),
+        "pca_components": pca.n_components_,
+        "shift_share_in_pca_subspace": float(inside @ inside / max(shift @ shift, 1e-300)),
     }
 
 
@@ -94,6 +115,7 @@ def run_benchmark(
             "std_fallback_columns": pre.std_fallback_columns,
             "description": ds.description,
             **duplicate_stats(X, y),
+            **shift_stats(X, y, pre.feature_names),
         }
         log(f"{ds_name}: n={ds.n:,} d={X.shape[1]} anomalies={ds.n_anomalies:,}")
         if ds_name in keep:

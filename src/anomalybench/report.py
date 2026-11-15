@@ -75,6 +75,39 @@ def write_results_md(m: dict, path: str | Path) -> None:
         "",
     ]
 
+    out += [
+        "Diagnostics (computed with the labels, after scoring): how often rows are exact "
+        "duplicates, and where anomalies differ from normal rows.",
+        "",
+    ]
+    rows = [
+        [
+            ds,
+            f"{info['dup_share_anomalies']:.0%}",
+            f"{info['dup_share_normals']:.0%}",
+            f"{info['distinct_anomaly_rows']:,}",
+            f"{info['largest_shift_feature']} ({info['largest_shift']:+.2f})",
+            f"{info['pca_components']} of {info['d']}",
+            f"{info['shift_share_in_pca_subspace']:.0%}",
+        ]
+        for ds, info in m["datasets"].items()
+    ]
+    out += [
+        _table(
+            [
+                "Dataset",
+                "Anomaly rows with a duplicate",
+                "Normal rows with a duplicate",
+                "Distinct anomaly rows",
+                "Largest mean shift (robust SDs)",
+                "PCA components (90% var.)",
+                "Mean shift inside PCA subspace",
+            ],
+            rows,
+        ),
+        "",
+    ]
+
     excl = m["config"]["excluded_from_ranking"]
     out += ["## Average precision", ""]
     if excl:
